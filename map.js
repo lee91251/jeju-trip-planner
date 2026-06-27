@@ -78,6 +78,8 @@ function jumpToDay(day){
 
 // ---- 프리셋(제주) 빠른 추가 + 검색 사전 ----
 const PRESET = (typeof PLACES!=='undefined') ? PLACES : [];
+// 추천 49곳: 관광공사 키워드검색으로 검증한 정확한 사진을 미리 부착(최우선)
+if(typeof PRESET_IMG!=='undefined') PRESET.forEach(p=>{ if(PRESET_IMG[p.name]) p.img=PRESET_IMG[p.name]; });
 const presetByName = {}; PRESET.forEach(p=>presetByName[p.name]=p);
 // 로컬 검색 사전(프리셋 + 관광공사 TourAPI 데이터 병합)
 let localByName = Object.assign({}, presetByName);
@@ -90,6 +92,8 @@ fetch('places_jeju.json').then(r=>r.ok?r.json():null).then(arr=>{
   // 프리셋(큐레이션 49곳)에 관광공사 사진을 '이름이 같은' 곳에서 가져와 보강
   PRESET.forEach(pr=>{ if(!pr.img){ const im=photoForName(pr.name, pr.lng, pr.lat); if(im) pr.img=im; } });
   buildAutocompleteIndex();
+  // 이미 추가/복원된 장소도 데이터 도착 후 사진 재매칭 + 화면 갱신 (타이밍 race 방지)
+  if(selected.length){ selected.forEach(enrichPhoto); if(DAYS.length) generate(false); else previewMarkers(); }
   toast(`제주 관광지 ${arr.length.toLocaleString()}곳 + 사진을 불러왔어요`);
 }).catch(()=>{});
 
@@ -326,6 +330,7 @@ function makeMarker(p, idx, cls, color){
 // 일정 생성 전: 추가된 장소 일차 색으로 미리보기
 function previewMarkers(){
   if(DAYS.length) return; // 일정 생성됐으면 건너뜀
+  selected.forEach(enrichPhoto);
   clearMarkers();
   selected.forEach(p=>{ const d=p.day||1; makeMarker(p, d, 'route', DAY_COLORS[(d-1)%DAY_COLORS.length]); });
   if(selected.length) fitTo(selected, 60);
@@ -561,7 +566,8 @@ function resetAll(){
 }
 
 /* ===== 저장 · 공유 · 인쇄 ===== */
-function planData(){ return { v:2, days:totalDays, places:selected }; }
+// 사진(img)은 저장하지 않음 → 복원 시 항상 '이름 일치'로 새로 맞춤(잘못된 사진이 남지 않게)
+function planData(){ return { v:2, days:totalDays, places:selected.map(({img, ...r})=>r) }; }
 function savePlan(){ try{ localStorage.setItem('jeju_plan_v2', JSON.stringify(planData())); }catch(e){} }
 function encodePlan(p){ return btoa(unescape(encodeURIComponent(JSON.stringify(p)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function decodePlan(s){ try{ s=s.replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; } }
@@ -590,7 +596,7 @@ let pendingRestore=null;
   if(!p){ try{ p=JSON.parse(localStorage.getItem('jeju_plan_v2')||'null'); }catch(e){} }
   if(p && Array.isArray(p.places) && p.places.length){
     selected=p.places.filter(x=>x&&typeof x.lng==='number'&&typeof x.lat==='number');
-    selected.forEach(x=>{ if(!x.day) x.day=1; });
+    selected.forEach(x=>{ if(!x.day) x.day=1; delete x.img; });   // 옛 저장본의 잘못된 사진 제거 → 재매칭
     if(p.days){ totalDays=p.days; $('#days').value=p.days; }
     if(activeDay>totalDays) activeDay=totalDays;
     renderDayTabs(); renderChips();
