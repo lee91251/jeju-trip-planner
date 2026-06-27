@@ -11,12 +11,11 @@ const REGION = {
 };
 
 // ---- 지도 초기화 (토큰 불필요) ----
-// 지구본(globe)에서 시작 → 인트로에서 제주로 날아온 뒤 제주로 잠금(maxBounds)
+// 장막 뒤에서 제주 상공에 세팅 → 장막 걷히며 기울며 줌인 → 제주로 잠금
 const map = new maplibregl.Map({
   container: 'map',
   style: 'https://tiles.openfreemap.org/styles/liberty',
-  projection: { type:'globe' },
-  center: REGION.center, zoom: 2.1, pitch: 0, bearing: 0,
+  center: REGION.center, zoom: 8.6, pitch: 0, bearing: 6,
   attributionControl: { compact: true }
 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'bottom-right');
@@ -27,8 +26,6 @@ let mapReady = false;
 function initMap(){
   if(mapReady) return;          // 중복 방지 (load + 폴링 둘 다 호출될 수 있음)
   mapReady = true;
-  // globe 투영을 로드 후 명시 적용 (스타일이 평면으로 덮는 것 방지)
-  try{ map.setProjection({ type:'globe' }); }catch(e){ try{ map.setProjection('globe'); }catch(e2){} }
   // 실제 3D 지형 (무료 AWS terrarium DEM)
   try{
     map.addSource('dem', {
@@ -63,20 +60,20 @@ function startIntro(){
   // 저장된 일정이 있으면 인트로 생략 → 바로 제주
   if(selected.length){ try{ map.jumpTo({ center:REGION.center, zoom:REGION.zoom, pitch:55, bearing:-12 }); }catch(e){} lockToJeju(); hideNow(); return; }
   // 지구본(우주)에서 제주로 부드럽게 날아옴
-  // 지구본을 먼저 띄워두되, 장막(불투명 인트로)으로 가려 평면 깜빡임을 숨김
-  try{ map.setProjection({ type:'globe' }); map.jumpTo({ center:REGION.center, zoom:1.35, pitch:0, bearing:0 }); }catch(e){}
+  // 장막 뒤: 제주 상공을 평평하게 세팅 (깜빡임 없음)
+  try{ map.jumpTo({ center:REGION.center, zoom:8.7, pitch:0, bearing:8 }); }catch(e){}
   const hide=()=>{ document.body.classList.remove('intro-active'); if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1300);}
     removeEventListener('wheel',hide); removeEventListener('touchmove',hide); };
-  // 1.2초: 타이틀 감상 → 장막이 걷히며(reveal) 지구본이 제주로 빨려듦
+  // 1.2초: 타이틀 감상 → 장막이 걷히며 제주 지형이 기울며 줌인(웅장하게 일어섬)
   setTimeout(()=>{
     if(el) el.classList.add('reveal');
-    try{ map.flyTo({ center:REGION.center, zoom:9.6, pitch:56, bearing:-16, duration:6200, curve:1.5, essential:true }); }catch(e){}
+    try{ map.easeTo({ center:REGION.center, zoom:9.7, pitch:60, bearing:-14, duration:5200, easing:t=>1-Math.pow(1-t,3), essential:true }); }catch(e){}
   }, 1200);
-  setTimeout(lockToJeju, 7800);
+  setTimeout(lockToJeju, 6800);
   if(!el) return;
   el.addEventListener('click',hide);
   addEventListener('wheel',hide,{passive:true}); addEventListener('touchmove',hide,{passive:true});
-  setTimeout(hide, 6600);   // 제주 도착 즈음 장막 완전히 사라짐
+  setTimeout(hide, 5800);   // 줌인 마무리 즈음 장막 사라짐
 }
 // 안전장치: load 이벤트가 안 떠도 스타일이 준비되면 진행
 (function poll(){ if(mapReady) return; if(map.isStyleLoaded()) initMap(); else setTimeout(poll, 400); })();
@@ -580,12 +577,8 @@ function focusSpot(p, gi, di, card){
   card && card.classList.add('in');
   markerObjs.forEach(m=> m.el.classList.toggle('active', m.name===p.name));
   const bearing = -12 + gi*16;   // 장소마다 살짝 회전 → 지도가 돌아가는 느낌
-  // 왼쪽 카드를 피해 '남은 공간'의 중앙에 장소가 오도록 padding 사용(offset보다 직관적).
-  const narrow = innerWidth < 760;
-  const pad = narrow ? { top:0, bottom:Math.round(innerHeight*0.34), left:0, right:0 }
-                     : { left:Math.min(460, Math.round(innerWidth*0.32)), top:0, right:0, bottom:0 };
-  map.flyTo({ center:[p.lng,p.lat], zoom:16.3, pitch:60, bearing,
-    padding:pad, duration:2400, curve:1.5, essential:true });
+  // 장소를 화면 정중앙에 정확히 (padding/offset이 오히려 어긋나게 했음)
+  map.flyTo({ center:[p.lng,p.lat], zoom:16.3, pitch:60, bearing, duration:2400, curve:1.5, essential:true });
 }
 
 function focusDay(d, di, card){
