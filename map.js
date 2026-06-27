@@ -45,8 +45,29 @@ function initMap(){
       paint:{ 'line-color':['get','color'], 'line-width':4, 'line-opacity':0.9, 'line-dasharray':[1.5,1.2] } });
   }
   if(pendingRestore){ pendingRestore(); pendingRestore=null; }
+  startIntro();
 }
 map.on('load', initMap);
+
+// ===== 시네마틱 인트로 (영화처럼 천천히 들어오는 오프닝) =====
+let introDone=false;
+function startIntro(){
+  if(introDone) return; introDone=true;
+  // 저장된 일정이 있으면 인트로 생략(바로 일정 보기)
+  if(selected.length){ const el=document.getElementById('intro'); if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200); } return; }
+  // 카메라: 높은 곳에서 천천히 기울이며 줌인 (7초, 부드러운 ease-out)
+  try{
+    map.jumpTo({ center:REGION.center, zoom:8.3, pitch:0, bearing:8 });
+    map.easeTo({ center:REGION.center, zoom:9.6, pitch:58, bearing:-16, duration:7000, easing:t=>1-Math.pow(1-t,3), essential:true });
+  }catch(e){}
+  // 인트로 오버레이: 잠시 보여주고 페이드 / 스크롤·클릭 시 즉시 시작
+  const el=document.getElementById('intro'); if(!el) return;
+  const hide=()=>{ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);
+    removeEventListener('wheel',hide); removeEventListener('touchmove',hide); };
+  el.addEventListener('click',hide);
+  addEventListener('wheel',hide,{passive:true}); addEventListener('touchmove',hide,{passive:true});
+  setTimeout(hide, 4600);
+}
 // 안전장치: load 이벤트가 안 떠도 스타일이 준비되면 진행
 (function poll(){ if(mapReady) return; if(map.isStyleLoaded()) initMap(); else setTimeout(poll, 400); })();
 

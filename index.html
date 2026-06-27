@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>여행 플래너 · 실제 지도</title>
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
   :root{
     --accent:#2dd4bf; --accent2:#fbbf24; --ink:#e8f1f8;
@@ -15,6 +16,29 @@
   body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif; color:var(--ink); background:#06121f;}
   #map{position:fixed; inset:0; z-index:0;}
   .maplibregl-ctrl-attrib{font-size:10px;}
+
+  /* ===== 시네마틱 인트로 ===== */
+  #intro{position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+    padding:6vw; text-align:center; pointer-events:auto;
+    background:
+      radial-gradient(120% 90% at 50% 38%, rgba(6,18,31,.12) 0%, rgba(6,18,31,.55) 55%, rgba(6,18,31,.92) 100%);
+    transition:opacity 1.2s ease, visibility 1.2s;}
+  #intro.hide{opacity:0; visibility:hidden;}
+  #intro::after{content:""; position:absolute; left:0; right:0; bottom:0; height:40%;
+    background:linear-gradient(180deg, transparent, rgba(6,18,31,.6)); pointer-events:none;}
+  .intro-inner{position:relative; z-index:1;}
+  #intro .kicker{font-size:clamp(11px,1.3vw,14px); letter-spacing:.45em; font-weight:700; color:var(--accent);
+    opacity:0; transform:translateY(14px); animation:introUp .9s .35s cubic-bezier(.2,.8,.2,1) forwards;}
+  #intro h1{font-size:clamp(38px,7.5vw,94px); font-weight:800; letter-spacing:-.02em; line-height:1.06; margin:18px 0 14px;
+    background:linear-gradient(180deg,#ffffff 30%,#a9d8f5); -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 10px 60px rgba(0,0,0,.4); opacity:0; transform:translateY(26px) scale(.98);
+    animation:introUp 1.1s .55s cubic-bezier(.2,.8,.2,1) forwards;}
+  #intro p{font-size:clamp(15px,2vw,21px); color:#d4e9f7; font-weight:300; letter-spacing:.01em;
+    opacity:0; transform:translateY(18px); animation:introUp 1.1s .85s cubic-bezier(.2,.8,.2,1) forwards;}
+  #intro .go{margin-top:38px; font-size:13px; color:#9fc3dd; letter-spacing:.18em; font-weight:500;
+    opacity:0; animation:goPulse 2.4s 1.6s ease-in-out infinite; }
+  @keyframes introUp{to{opacity:1; transform:none;}}
+  @keyframes goPulse{0%,100%{opacity:.45; transform:translateY(0);} 50%{opacity:1; transform:translateY(7px);}}
 
   #scroll{position:relative; z-index:2; pointer-events:none;}
   .section{min-height:100vh; display:flex; align-items:center; padding:8vh 6vw;}
@@ -191,6 +215,15 @@
 <body>
   <div id="progress"></div>
   <div id="map"></div>
+
+  <div id="intro">
+    <div class="intro-inner">
+      <div class="kicker">JEJU&nbsp;&nbsp;TRIP&nbsp;&nbsp;PLANNER</div>
+      <h1>제주,<br>지도 위에 그리는 여행</h1>
+      <p>가고 싶은 곳을 담으면, 동선이 흐릅니다.</p>
+      <div class="go">스크롤하여 시작 ↓</div>
+    </div>
+  </div>
 
   <div id="panel">
     <button id="toggle" title="접기/펼치기">▾</button>
