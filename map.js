@@ -54,26 +54,22 @@ let introDone=false;
 function lockToJeju(){ try{ map.setMaxBounds(REGION.maxBounds); map.setMinZoom(REGION.minZoom); }catch(e){} }
 function startIntro(){
   if(introDone) return; introDone=true;
-  document.body.classList.add('intro-active');   // 인트로 동안 뒤(.hero) 글자 숨김 → 겹침 방지
+  document.body.classList.add('intro-active');
   const el=document.getElementById('intro');
-  const hideNow=()=>{ document.body.classList.remove('intro-active'); if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);} };
-  // 저장된 일정이 있으면 인트로 생략 → 바로 제주
-  if(selected.length){ try{ map.jumpTo({ center:REGION.center, zoom:REGION.zoom, pitch:55, bearing:-12 }); }catch(e){} lockToJeju(); hideNow(); return; }
-  // 지구본(우주)에서 제주로 부드럽게 날아옴
-  // 장막 뒤: 제주 상공을 평평하게 세팅 (깜빡임 없음)
-  try{ map.jumpTo({ center:REGION.center, zoom:8.7, pitch:0, bearing:8 }); }catch(e){}
   const hide=()=>{ document.body.classList.remove('intro-active'); if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1300);}
     removeEventListener('wheel',hide); removeEventListener('touchmove',hide); };
-  // 1.2초: 타이틀 감상 → 장막이 걷히며 제주 지형이 기울며 줌인(웅장하게 일어섬)
+  // 장막 뒤: 멀리(제주 남해 상공)에 세팅 — 평면 세계지도 풀샷은 안 보이는 지역 줌
+  try{ map.jumpTo({ center:[126.55, 33.0], zoom:5.6, pitch:0, bearing:10 }); }catch(e){}
+  // 1.2초: 타이틀 감상 → 장막 걷히며 멀리서 제주로 시네마틱 비행(줌인 5.6→9.7 + 기울임)
   setTimeout(()=>{
     if(el) el.classList.add('reveal');
-    try{ map.easeTo({ center:REGION.center, zoom:9.7, pitch:60, bearing:-14, duration:5200, easing:t=>1-Math.pow(1-t,3), essential:true }); }catch(e){}
+    try{ map.flyTo({ center:REGION.center, zoom:9.7, pitch:60, bearing:-14, duration:5200, curve:1.6, essential:true }); }catch(e){}
   }, 1200);
-  setTimeout(lockToJeju, 6800);
+  setTimeout(lockToJeju, 6800);   // 도착 후 제주로 잠금
   if(!el) return;
   el.addEventListener('click',hide);
   addEventListener('wheel',hide,{passive:true}); addEventListener('touchmove',hide,{passive:true});
-  setTimeout(hide, 5800);   // 줌인 마무리 즈음 장막 사라짐
+  setTimeout(hide, 5800);   // 도착 즈음 장막 사라짐
 }
 // 안전장치: load 이벤트가 안 떠도 스타일이 준비되면 진행
 (function poll(){ if(mapReady) return; if(map.isStyleLoaded()) initMap(); else setTimeout(poll, 400); })();
