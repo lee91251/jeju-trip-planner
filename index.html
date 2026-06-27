@@ -44,12 +44,14 @@
   .hero{transition:opacity 1s ease;}
   body.intro-active .hero{opacity:0; pointer-events:none;}
 
-  /* ===== 시네마틱 인트로 ===== */
+  /* ===== 시네마틱 인트로 (장막 → 걷히며 지구본 공개) ===== */
   #intro{position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
     padding:6vw; text-align:center; pointer-events:auto;
-    background:
-      radial-gradient(115% 95% at 50% 40%, rgba(6,18,31,0) 0%, rgba(6,18,31,.30) 38%, rgba(5,14,24,.72) 72%, rgba(3,9,16,.96) 100%);
-    transition:opacity 1.2s ease, visibility 1.2s;}
+    /* 1단계: 거의 불투명한 장막 (평면 깜빡임 가림) */
+    background:radial-gradient(circle at 50% 40%, #0d2c45 0%, #08203360 0%, #071a2b 46%, #03101c 78%, #01070e 100%);
+    transition:opacity 1.4s ease, background 1.8s ease, visibility 1.4s;}
+  /* 2단계: 장막이 걷혀 지구본이 비침 */
+  #intro.reveal{background:radial-gradient(118% 96% at 50% 40%, rgba(6,18,31,.06) 0%, rgba(6,18,31,.40) 42%, rgba(5,14,24,.80) 74%, rgba(2,8,15,.97) 100%);}
   #intro.hide{opacity:0; visibility:hidden;}
   /* 위·아래 시네마틱 레터박스 느낌의 어둠 */
   #intro::before{content:""; position:absolute; left:0; right:0; top:0; height:30%;
@@ -81,7 +83,10 @@
     background:linear-gradient(90deg,#fff,#2dd4bf); -webkit-background-clip:text; background-clip:text; color:transparent;
     text-shadow:0 6px 30px rgba(0,0,0,.5);}
   .hero p{font-size:clamp(14px,2vw,19px); color:#cfe6f5; max-width:620px; margin:0 auto; text-shadow:0 2px 12px rgba(0,0,0,.7);}
-  .hint{margin-top:20px; font-size:14px; color:#bfe6ff; animation:bob 2s infinite;}
+  .hint{display:inline-block; margin-top:20px; font-size:14px; color:#eaf6ff; line-height:1.6;
+    background:rgba(8,22,38,.66); border:1px solid var(--line); padding:11px 20px; border-radius:16px;
+    backdrop-filter:blur(10px); box-shadow:0 10px 30px rgba(0,0,0,.4); animation:bob 2.4s infinite;}
+  .hint b{color:var(--accent);}
   @keyframes bob{0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)}}
 
   .day{max-width:430px; pointer-events:auto;}
