@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>여행 플래너 · 실제 지도</title>
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+  :root{
+    --accent:#2dd4bf; --accent2:#fbbf24; --ink:#e8f1f8;
+    --panel:rgba(10,22,38,0.82); --line:rgba(255,255,255,0.12);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif; color:var(--ink); background:#06121f;}
+  #map{position:fixed; inset:0; z-index:0;}
+  .maplibregl-ctrl-attrib{font-size:10px;}
+
+  #scroll{position:relative; z-index:2; pointer-events:none;}
+  .section{min-height:100vh; display:flex; align-items:center; padding:8vh 6vw;}
+  .hero{flex-direction:column; justify-content:center; text-align:center; gap:16px;}
+  .hero h1{font-size:clamp(30px,5.5vw,64px); font-weight:800; letter-spacing:-1px;
+    background:linear-gradient(90deg,#fff,#2dd4bf); -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 6px 30px rgba(0,0,0,.5);}
+  .hero p{font-size:clamp(14px,2vw,19px); color:#cfe6f5; max-width:620px; margin:0 auto; text-shadow:0 2px 12px rgba(0,0,0,.7);}
+  .hint{margin-top:20px; font-size:14px; color:#bfe6ff; animation:bob 2s infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)}}
+
+  .day{max-width:430px; pointer-events:auto;}
+  .day .badge{display:inline-block; padding:6px 16px; border-radius:999px; color:#04222a; font-weight:800; font-size:14px;
+    background:linear-gradient(90deg,var(--accent),#0ea5b7);}
+  .day h2{font-size:clamp(24px,4vw,38px); margin:14px 0 6px; font-weight:800; text-shadow:0 2px 16px rgba(0,0,0,.7);}
+  .day .region{color:var(--accent2); font-weight:700; margin-bottom:16px; text-shadow:0 2px 10px rgba(0,0,0,.7);}
+  .day ul{list-style:none; display:flex; flex-direction:column; gap:10px;}
+  .day li{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:13px 15px;
+    backdrop-filter:blur(10px); display:flex; gap:12px; align-items:flex-start;
+    opacity:0; transform:translateX(-24px); transition:.6s cubic-bezier(.2,.8,.2,1);}
+  .day.in li{opacity:1; transform:translateX(0);}
+  .day li:nth-child(2){transition-delay:.07s} .day li:nth-child(3){transition-delay:.14s}
+  .day li:nth-child(4){transition-delay:.21s} .day li:nth-child(5){transition-delay:.28s}
+  .day li:nth-child(6){transition-delay:.35s}
+  .day li .n{width:28px; height:28px; flex:0 0 28px; border-radius:50%; margin-top:2px;
+    background:var(--accent); color:#04222a; font-weight:800; display:grid; place-items:center; font-size:13px;}
+  .day li .info{min-width:0;}
+  .day li .nm{font-weight:700;}
+  .day li .dur{font-size:11px; color:#04222a; background:var(--accent2); padding:1px 7px; border-radius:999px; margin-left:4px; font-weight:700;}
+  .day li .desc{font-size:12px; color:#a8c8de; margin-top:3px; line-height:1.45;}
+
+  /* 일자 구분 헤더 */
+  .dayhead{min-height:42vh;}
+  .dayhead-card{pointer-events:auto; display:inline-flex; align-items:center; gap:12px;
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 18px; backdrop-filter:blur(10px);}
+  .dayhead-card .dh-title{font-weight:800; font-size:20px;}
+  .dayhead-card .dh-sub{font-size:13px; color:#9fc3dd;}
+
+  /* 장소 카드 (한 곳씩) */
+  .spot{max-width:420px; pointer-events:auto; background:var(--panel); border:1px solid var(--line);
+    border-left:5px solid var(--c,#2dd4bf); border-radius:16px; padding:18px 20px; backdrop-filter:blur(12px);
+    box-shadow:0 18px 50px rgba(0,0,0,.45); opacity:0; transform:translateX(-28px) scale(.97);
+    transition:.6s cubic-bezier(.2,.8,.2,1);}
+  .spot.in{opacity:1; transform:translateX(0) scale(1);}
+  .spot-top{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .spot-no{width:30px; height:30px; flex:0 0 30px; border-radius:50%; color:#04222a; font-weight:800;
+    display:grid; place-items:center; font-size:15px;}
+  .spot-day{font-size:12px; font-weight:700; color:#9fc3dd; letter-spacing:.3px;}
+  .spot h2{font-size:clamp(22px,3.4vw,32px); font-weight:800; margin:2px 0 6px; text-shadow:0 2px 14px rgba(0,0,0,.6);}
+  .spot-meta{font-size:13px; color:var(--accent2); font-weight:700; margin-bottom:10px;}
+  .spot-desc{font-size:14px; color:#c4ddee; line-height:1.6;}
+  .spot-tel{font-size:13px; color:#8fb6d2; margin-top:7px;}
+  .spot-img{width:100%; height:160px; object-fit:cover; border-radius:12px; margin-bottom:12px; display:block; background:rgba(255,255,255,.05);}
+
+  /* 마커 사진 팝업 */
+  .maplibregl-popup-content{padding:0!important; border-radius:14px!important; overflow:hidden; background:#0c1c2e!important; border:1px solid var(--line);}
+  .maplibregl-popup-tip{border-top-color:#0c1c2e!important; border-bottom-color:#0c1c2e!important;}
+  .pop img{width:100%; height:130px; object-fit:cover; display:block;}
+  .pop-t{font-weight:800; color:var(--ink); padding:9px 12px 2px;}
+  .pop-d{font-size:12px; color:#9fc3dd; padding:0 12px 10px; line-height:1.4;}
+
+  /* 입력 패널 */
+  #panel{position:fixed; z-index:5; top:16px; left:16px; width:300px; max-width:calc(100vw - 32px);
+    max-height:calc(100vh - 32px); overflow-y:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:15px;
+    backdrop-filter:blur(16px); box-shadow:0 20px 60px rgba(0,0,0,.5); transition:.4s;}
+  #panel.min{max-height:52px; overflow:hidden;}
+  #panel::-webkit-scrollbar{width:7px;} #panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15); border-radius:4px;}
+  #panel h3{font-size:16px; margin-bottom:3px;}
+  #panel .sub{font-size:12px; color:#9fc3dd; margin-bottom:12px;}
+  .row{display:flex; gap:8px; margin-bottom:10px;}
+  input,select,button{font-family:inherit; font-size:14px;}
+  #search{flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+    background:rgba(255,255,255,.07); color:var(--ink); outline:none; min-width:0;}
+  #search::placeholder{color:#6f96b4;}
+  .btn{padding:10px 14px; border:none; border-radius:10px; cursor:pointer; font-weight:700; color:#04222a; background:var(--accent); transition:.2s; white-space:nowrap;}
+  .btn:hover{filter:brightness(1.1);} .btn:active{transform:scale(.97);} .btn:disabled{opacity:.5; cursor:wait;}
+  .btn.ghost{background:rgba(255,255,255,.08); color:var(--ink); border:1px solid var(--line);}
+  .chips{display:flex; flex-wrap:wrap; gap:7px; margin:4px 0 12px; max-height:150px; overflow-y:auto;}
+  .chip{background:rgba(45,212,191,.16); border:1px solid rgba(45,212,191,.4); color:#bff6ee;
+    padding:6px 10px; border-radius:999px; font-size:13px; display:flex; align-items:center; gap:6px;}
+  .chip b{cursor:pointer; color:#fff; opacity:.6;} .chip b:hover{opacity:1;}
+  .cfg{display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:13px; color:#9fc3dd;}
+  .cfg select{padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.12); color:var(--ink); font-weight:700;}
+  select option{ color:#0a1929; background:#ffffff; font-weight:600; }
+  .empty{font-size:13px; color:#6f96b4; padding:6px 0;}
+  #toggle{position:absolute; top:13px; right:14px; background:none; border:none; color:#8fb6d2; font-size:18px; cursor:pointer;}
+  /* 검색 자동완성 */
+  .searchbox{position:relative; z-index:6;}
+  .ac{position:absolute; left:0; right:0; top:calc(100% + 4px); background:#0c1c2e; border:1px solid var(--line);
+    border-radius:12px; overflow:hidden; max-height:260px; overflow-y:auto; display:none; box-shadow:0 16px 40px rgba(0,0,0,.5);}
+  .ac.show{display:block;}
+  .ac-item{display:flex; align-items:center; gap:9px; padding:9px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.05);}
+  .ac-item:last-child{border-bottom:none;}
+  .ac-item:hover,.ac-item.sel{background:rgba(45,212,191,.16);}
+  .ac-item .ic{font-size:15px;}
+  .ac-item .nm{font-weight:600; font-size:14px; color:var(--ink); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ac-item .rg{font-size:11px; color:#8fb6d2; white-space:nowrap; max-width:90px; overflow:hidden; text-overflow:ellipsis;}
+  .ac-empty{padding:11px 12px; font-size:13px; color:#7fa6c4;}
+  .ac-sec{padding:6px 12px 3px; font-size:11px; font-weight:700; color:#7fb0d0; background:rgba(255,255,255,.03);}
+
+  .quick{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+  .quick span{font-size:12px; padding:5px 9px; border-radius:8px; cursor:pointer; background:rgba(255,255,255,.05); border:1px solid var(--line); color:#b7d4e8;}
+  .quick span:hover{background:rgba(251,191,36,.2); border-color:var(--accent2);}
+  .note{font-size:11px; color:#6f96b4; margin-bottom:10px; line-height:1.4;}
+
+  /* AI 추천 코스 (접이식) */
+  .reco2{margin:2px 0 12px; border-top:1px solid var(--line); padding-top:10px;}
+  .reco2 summary{font-size:13px; font-weight:700; color:#cfe6f5; cursor:pointer; list-style:none; user-select:none;}
+  .reco2 summary::-webkit-details-marker{display:none;}
+  .reco2 summary::before{content:'▸ '; color:#6f96b4;}
+  .reco2[open] summary::before{content:'▾ ';}
+  .reco2 summary small{font-weight:500; color:#6f96b4;}
+  .reco-list{display:flex; flex-direction:column; gap:7px; margin-top:9px;}
+  .reco{margin:2px 0 12px;}
+  .reco-h{font-size:13px; font-weight:700; color:#cfe6f5; margin-bottom:8px;}
+
+  /* 총 여행일 + 자동배치 */
+  .btn.mini{padding:6px 10px; font-size:12px;}
+  .gen-btn{width:100%; padding:12px; font-size:15px; margin-top:2px;}
+
+  /* 일차 탭 (추가할 일차 선택) */
+  .dtwrap{margin:0 0 10px;}
+  .dtlabel{font-size:12px; color:#9fc3dd; margin-bottom:6px; font-weight:600;}
+  .daytabs{display:flex; flex-wrap:wrap; gap:6px;}
+  .daytab{flex:1; min-width:42px; text-align:center; padding:8px 4px; border-radius:9px; cursor:pointer;
+    font-weight:800; font-size:13px; background:rgba(255,255,255,.06); border:1px solid var(--line); color:#b7d4e8; transition:.15s;}
+  .daytab.on{color:#04222a; border-color:transparent;}
+  .daytab .cnt{font-size:10px; font-weight:600; opacity:.85; display:block;}
+
+  /* 일차별 칩 그룹 */
+  .chipday{margin-bottom:9px;}
+  .chipday-h{font-size:11px; font-weight:800; margin-bottom:5px; letter-spacing:.3px;}
+  .chip .daybadge{cursor:pointer; background:rgba(255,255,255,.18); color:#fff; border-radius:6px;
+    padding:0 5px; font-size:11px; font-weight:800;}
+  .chip .daybadge:hover{background:rgba(255,255,255,.35);}
+  .reco-card{text-align:left; cursor:pointer; border:1px solid var(--line); border-radius:11px; padding:9px 12px;
+    background:linear-gradient(120deg,rgba(167,139,250,.14),rgba(45,212,191,.10)); color:var(--ink); transition:.18s;}
+  .reco-card:hover{border-color:var(--accent); transform:translateY(-1px);}
+  .reco-card .t{font-weight:800; font-size:13px;}
+  .reco-card .d{font-size:11px; color:#9fc3dd; margin-top:2px;}
+
+  /* 지도 위 마커 */
+  .mk{width:30px; height:30px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+    background:#5b7a92; border:2px solid #fff; box-shadow:0 4px 10px rgba(0,0,0,.4); cursor:pointer; display:grid; place-items:center;}
+  .mk b{transform:rotate(45deg); font-size:12px; font-weight:800; color:#fff;}
+  .mk.route{background:var(--accent2);} .mk.route b{color:#3a2c00;}
+  .mk.active{background:var(--accent); transform:rotate(-45deg) scale(1.25);} .mk.active b{color:#04222a;}
+
+  #toast{position:fixed; left:50%; bottom:30px; transform:translate(-50%,20px); z-index:20;
+    background:rgba(15,45,74,.96); border:1px solid var(--line); color:#dff; padding:12px 20px; border-radius:12px;
+    font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.35s; box-shadow:0 12px 40px rgba(0,0,0,.45); max-width:90vw; text-align:center;}
+  #toast.show{opacity:1; transform:translate(-50%,0);}
+  #progress{position:fixed; top:0; left:0; height:3px; width:0; z-index:10; background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .footer{min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center;}
+  .footer h2{font-size:26px; text-shadow:0 2px 16px rgba(0,0,0,.7);} .footer p{color:#cfe6f5; text-shadow:0 2px 10px rgba(0,0,0,.7); pointer-events:auto;}
+  .credit{position:fixed; bottom:10px; right:14px; z-index:5; font-size:11px; color:#7fa6c4;}
+
+  @media print{
+    @page{margin:14mm;}
+    body{background:#fff; color:#111;}
+    #map,#panel,#progress,.credit,.hero,#end,#toast,.hint{display:none !important;}
+    #scroll{position:static; pointer-events:auto;}
+    .section{min-height:auto; display:block; padding:0; page-break-inside:avoid;}
+    .dayhead{min-height:auto; margin-top:10px;}
+    .dayhead-card{background:#eef4fa; border:1px solid #d9e3ec;} .dayhead-card .dh-title{color:#111;}
+    .spot{max-width:none; opacity:1 !important; transform:none !important; background:#f5f8fb; border:1px solid #d9e3ec;
+      border-left:5px solid var(--c,#2dd4bf); box-shadow:none; margin-bottom:10px; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .spot h2{color:#111; text-shadow:none;} .spot-desc{color:#334;} .spot-meta{color:#0a6e60;}
+    .badge{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+  <div id="progress"></div>
+  <div id="map"></div>
+
+  <div id="panel">
+    <button id="toggle" title="접기/펼치기">▾</button>
+    <h3>🗺️ 여행 플래너 <span style="font-size:11px;color:#6f96b4;">실제 지도</span></h3>
+    <div class="sub">전 세계 어디든 검색해서 추가하세요</div>
+
+    <div class="searchbox">
+      <div class="row">
+        <input id="search" placeholder="장소·주소 검색 (예: 성산일출봉, 에펠탑)" autocomplete="off" />
+        <button class="btn" id="add">추가</button>
+      </div>
+      <div id="ac" class="ac"></div>
+    </div>
+    <div class="quick" id="quick"></div>
+
+    <details class="reco2">
+      <summary>✨ AI 추천 코스 <small>탭하면 자동 완성</small></summary>
+      <div class="reco-list" id="reco"></div>
+    </details>
+
+    <div class="cfg">
+      <span>총</span>
+      <select id="days"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select>
+      <span>일 여행</span>
+      <button class="btn ghost mini" id="auto" title="가까운 곳끼리 자동으로 일자 배치">자동배치</button>
+    </div>
+
+    <div class="dtwrap">
+      <div class="dtlabel">➕ 지금 추가할 일차</div>
+      <div class="daytabs" id="daytabs"></div>
+    </div>
+
+    <div class="chips" id="chips"><div class="empty">위에서 장소를 검색해 추가하세요.</div></div>
+
+    <button class="btn gen-btn" id="gen">일정 생성 ✦</button>
+    <div class="row" style="margin:8px 0;">
+      <button class="btn ghost" id="save" style="flex:1;">💾</button>
+      <button class="btn ghost" id="share" style="flex:1;">🔗</button>
+      <button class="btn ghost" id="print" style="flex:1;">🖨️</button>
+      <button class="btn ghost" id="reset" style="flex:1;">초기화</button>
+    </div>
+  </div>
+
+  <div id="scroll">
+    <section class="section hero">
+      <h1>지도 위에 그리는 여행</h1>
+      <p>가고 싶은 곳을 검색해 추가하고 <b>일정 생성</b>을 누르세요.<br/>스크롤을 내리면 실제 3D 지도가 일자별로 날아갑니다.</p>
+      <div class="hint">▼ 일정을 만들면 여기에 날짜가 펼쳐집니다 ▼</div>
+    </section>
+    <div id="itinerary"></div>
+    <section class="section footer" id="end" style="display:none;">
+      <h2>좋은 여행 되세요 ✈️</h2>
+      <p>장소를 바꾸고 다시 <b>일정 생성</b>을 누르면 새 동선이 만들어져요.</p>
+    </section>
+  </div>
+
+  <div class="credit">prototype v2 · MapLibre · 지도 © OpenFreeMap·OSM</div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="data.js"></script>
+<script src="map.js"></script>
+</body>
+</html>

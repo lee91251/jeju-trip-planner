@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>제주 여행 플래너 · Jeju Trip Planner</title>
+<style>
+  :root{
+    --bg1:#0a1929; --bg2:#0f2d4a; --sea:#1a4d7a;
+    --accent:#2dd4bf; --accent2:#fbbf24; --ink:#e8f1f8;
+    --panel:rgba(12,28,46,0.72); --line:rgba(255,255,255,0.12);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    color:var(--ink); background:#06121f; overflow-x:hidden;
+  }
+  /* 고정된 3D 무대 */
+  #stage{position:fixed; inset:0; z-index:0;}
+  canvas{display:block;}
+
+  /* 스크롤 콘텐츠 */
+  #scroll{position:relative; z-index:2;}
+  .section{min-height:100vh; display:flex; align-items:center; padding:8vh 6vw;}
+  .hero{flex-direction:column; justify-content:center; text-align:center; gap:18px;}
+  .hero h1{font-size:clamp(34px,6vw,72px); font-weight:800; letter-spacing:-1px;
+    background:linear-gradient(90deg,#fff,#2dd4bf); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .hero p{font-size:clamp(15px,2vw,20px); color:#9fc3dd; max-width:620px; margin:0 auto;}
+  .hint{margin-top:24px; font-size:14px; color:#7fb0d0; animation:bob 2s infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)}}
+
+  /* 일자 카드 */
+  .day{max-width:440px;}
+  .day .badge{display:inline-block; padding:6px 16px; border-radius:999px;
+    background:linear-gradient(90deg,var(--accent),#0ea5b7); color:#04222a; font-weight:800; font-size:14px;}
+  .day h2{font-size:clamp(26px,4vw,40px); margin:14px 0 6px; font-weight:800;}
+  .day .region{color:var(--accent2); font-weight:700; margin-bottom:18px;}
+  .day ul{list-style:none; display:flex; flex-direction:column; gap:10px;}
+  .day li{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; backdrop-filter:blur(10px); display:flex; gap:12px; align-items:center;
+    opacity:0; transform:translateX(-24px); transition:.6s cubic-bezier(.2,.8,.2,1);}
+  .day.in li{opacity:1; transform:translateX(0);}
+  .day li:nth-child(2){transition-delay:.08s} .day li:nth-child(3){transition-delay:.16s}
+  .day li:nth-child(4){transition-delay:.24s} .day li:nth-child(5){transition-delay:.32s}
+  .day li .n{width:30px; height:30px; flex:0 0 30px; border-radius:50%;
+    background:var(--accent); color:#04222a; font-weight:800; display:grid; place-items:center; font-size:14px;}
+  .day li .info{min-width:0;}
+  .day li .nm{font-weight:700;}
+  .day li .dur{font-size:11px; color:#04222a; background:var(--accent2); padding:1px 7px; border-radius:999px; margin-left:4px; font-weight:700;}
+  .day li .desc{font-size:12px; color:#9fc3dd; margin-top:3px; line-height:1.45;}
+
+  /* 좌측 입력 패널 */
+  #panel{position:fixed; z-index:5; top:20px; left:20px; width:330px; max-width:calc(100vw - 40px);
+    background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px;
+    backdrop-filter:blur(16px); box-shadow:0 20px 60px rgba(0,0,0,.4);
+    transition:.5s; transform-origin:top left;}
+  #panel.min{height:56px; overflow:hidden;}
+  #panel h3{font-size:16px; margin-bottom:4px; display:flex; align-items:center; gap:8px;}
+  #panel .sub{font-size:12px; color:#8fb6d2; margin-bottom:14px;}
+  .row{display:flex; gap:8px; margin-bottom:10px;}
+  input,select,button{font-family:inherit; font-size:14px;}
+  #search{flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+    background:rgba(255,255,255,.06); color:var(--ink); outline:none;}
+  #search::placeholder{color:#6f96b4;}
+  .btn{padding:10px 14px; border:none; border-radius:10px; cursor:pointer; font-weight:700; color:#04222a;
+    background:var(--accent); transition:.2s;}
+  .btn:hover{filter:brightness(1.1);} .btn:active{transform:scale(.97);}
+  .btn.ghost{background:rgba(255,255,255,.08); color:var(--ink); border:1px solid var(--line);}
+  .chips{display:flex; flex-wrap:wrap; gap:7px; margin:6px 0 12px; max-height:160px; overflow-y:auto;}
+  .chip{background:rgba(45,212,191,.16); border:1px solid rgba(45,212,191,.4); color:#bff6ee;
+    padding:6px 10px; border-radius:999px; font-size:13px; display:flex; align-items:center; gap:6px;}
+  .chip b{cursor:pointer; color:#fff; opacity:.6;} .chip b:hover{opacity:1;}
+  .cfg{display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:13px; color:#9fc3dd;}
+  .cfg select{padding:8px 10px; border-radius:10px; border:1px solid var(--line);
+    background:rgba(255,255,255,.06); color:var(--ink);}
+  .empty{font-size:13px; color:#6f96b4; padding:8px 0;}
+  #toggle{position:absolute; top:14px; right:14px; background:none; border:none; color:#8fb6d2;
+    font-size:18px; cursor:pointer;}
+  .quick{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+  .quick span{font-size:12px; padding:5px 9px; border-radius:8px; cursor:pointer;
+    background:rgba(255,255,255,.05); border:1px solid var(--line); color:#b7d4e8;}
+  .quick span:hover{background:rgba(251,191,36,.2); border-color:var(--accent2);}
+
+  /* 떠다니는 라벨 */
+  #labels{position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden;}
+  .lbl{position:absolute; transform:translate(-50%,-130%); white-space:nowrap;
+    font-size:12px; font-weight:700; padding:3px 9px; border-radius:8px;
+    background:rgba(8,22,38,.82); border:1px solid var(--line); color:#dff; opacity:0;
+    transition:opacity .4s; pointer-events:none;}
+  .lbl.on{opacity:1;} .lbl.route{background:rgba(251,191,36,.92); color:#3a2c00; border-color:#fbbf24;}
+
+  .footer{min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center;}
+  .footer h2{font-size:28px;} .footer p{color:#8fb6d2;}
+  #progress{position:fixed; top:0; left:0; height:3px; width:0; z-index:10;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .credit{position:fixed; bottom:12px; right:16px; z-index:5; font-size:11px; color:#5e87a5;}
+
+  #toast{position:fixed; left:50%; bottom:32px; transform:translate(-50%,20px); z-index:20;
+    background:rgba(15,45,74,.95); border:1px solid var(--line); color:#dff; padding:12px 20px;
+    border-radius:12px; font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.35s;
+    box-shadow:0 12px 40px rgba(0,0,0,.45);}
+  #toast.show{opacity:1; transform:translate(-50%,0);}
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    @page{ margin:14mm; }
+    body{ background:#fff; color:#111; overflow:visible; }
+    #stage,#labels,#panel,#progress,.credit,.hero,#end,#toast{ display:none !important; }
+    #scroll{ position:static; }
+    .section{ min-height:auto; display:block; padding:0; page-break-inside:avoid; }
+    .day{ max-width:none; margin-bottom:18px; }
+    .day .badge{ color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .day h2{ color:#111; } .day .region{ color:#0a6e60; }
+    .day li{ opacity:1 !important; transform:none !important; background:#f5f8fb; border:1px solid #d9e3ec;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .day li .nm{ color:#111; } .day li .desc{ color:#445; }
+    .day li .n{ color:#fff; } .day li .dur{ color:#111; }
+  }
+</style>
+</head>
+<body>
+  <div id="progress"></div>
+  <div id="stage"></div>
+  <div id="labels"></div>
+
+  <div id="panel">
+    <button id="toggle" title="접기/펼치기">▾</button>
+    <h3>🍊 제주 여행 플래너</h3>
+    <div class="sub">가고 싶은 곳을 적으면 일정이 자동으로 만들어져요</div>
+
+    <div class="row">
+      <input id="search" list="places" placeholder="장소 검색 (예: 성산일출봉)" autocomplete="off" />
+      <button class="btn" id="add">추가</button>
+    </div>
+    <datalist id="places"></datalist>
+
+    <div class="quick" id="quick"></div>
+
+    <div class="chips" id="chips"><div class="empty">아직 추가된 장소가 없어요.</div></div>
+
+    <div class="cfg">
+      <span>여행</span>
+      <select id="days"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select>
+      <span>일</span>
+      <button class="btn" id="gen" style="margin-left:auto;">일정 생성 ✦</button>
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <button class="btn ghost" id="save" style="flex:1;">💾 저장</button>
+      <button class="btn ghost" id="share" style="flex:1;">🔗 공유</button>
+      <button class="btn ghost" id="print" style="flex:1;">🖨️ 인쇄</button>
+    </div>
+    <button class="btn ghost" id="reset" style="width:100%;">초기화</button>
+  </div>
+
+  <div id="scroll">
+    <section class="section hero">
+      <h1>제주, 당신의 동선대로</h1>
+      <p>왼쪽에 가고 싶은 장소를 넣고 <b>일정 생성</b>을 누르세요.<br/>스크롤을 내리면 제주 지도가 일자별 지역으로 돌아갑니다.</p>
+      <div class="hint">▼ 일정을 만들면 여기에 날짜가 펼쳐집니다 ▼</div>
+    </section>
+    <div id="itinerary"></div>
+    <section class="section footer" id="end" style="display:none;">
+      <h2>좋은 여행 되세요 ✈️</h2>
+      <p>장소를 바꾸고 다시 <b>일정 생성</b>을 누르면 새 동선이 만들어져요.</p>
+    </section>
+  </div>
+
+  <div class="credit">prototype v1 · Three.js + GSAP</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
