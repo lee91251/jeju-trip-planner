@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>제주 · 3D</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<style>
+  :root{ --accent:#36e0c8; --ink:#eaf6ff; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;}
+  body{background:#040b14; font-family:"Pretendard","Apple SD Gothic Neo",sans-serif; color:var(--ink);}
+  #c{position:fixed; inset:0;}
+  /* 인트로 타이틀 */
+  #intro{position:fixed; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    padding-top:9vh; text-align:center; pointer-events:none;
+    background:radial-gradient(120% 100% at 50% 36%, transparent 0%, rgba(4,11,20,.18) 50%, rgba(4,11,20,.72) 100%);}
+  #intro .kick{display:inline-flex; align-items:center; gap:14px; font-size:13px; letter-spacing:.5em; font-weight:700; color:var(--accent);
+    opacity:0; transform:translateY(14px); animation:up 1s .4s cubic-bezier(.2,.8,.2,1) forwards;}
+  #intro .kick::before,#intro .kick::after{content:""; width:42px; height:1px; background:linear-gradient(90deg,transparent,var(--accent));}
+  #intro .kick::after{background:linear-gradient(90deg,var(--accent),transparent);}
+  #intro h1{font-size:clamp(44px,9vw,120px); font-weight:800; letter-spacing:-.03em; line-height:1; margin:20px 0 14px;
+    background:linear-gradient(180deg,#fff 26%,#9fe6da); -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 20px 80px rgba(0,0,0,.5); opacity:0; filter:blur(16px); transform:translateY(28px);
+    animation:up 1.3s .6s cubic-bezier(.2,.8,.2,1) forwards;}
+  #intro p{font-size:clamp(15px,2vw,22px); color:#cfeef0; font-weight:300; letter-spacing:.02em;
+    opacity:0; filter:blur(8px); transform:translateY(16px); animation:up 1.3s .95s cubic-bezier(.2,.8,.2,1) forwards;}
+  @keyframes up{to{opacity:1; transform:none; filter:blur(0);}}
+  .badge{position:fixed; left:18px; bottom:14px; z-index:11; font-size:11px; color:#5e87a5;}
+</style>
+</head>
+<body>
+  <div id="c"></div>
+  <div id="intro">
+    <div class="kick">JEJU&nbsp;&nbsp;3D</div>
+    <h1>제주</h1>
+    <p>지도 위에 그리는 여행</p>
+  </div>
+  <div class="badge">Three.js prototype</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="data.js"></script>
+<script src="v3.js"></script>
+</body>
+</html>
