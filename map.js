@@ -57,8 +57,9 @@ let introDone=false;
 function lockToJeju(){ try{ map.setMaxBounds(REGION.maxBounds); map.setMinZoom(REGION.minZoom); }catch(e){} }
 function startIntro(){
   if(introDone) return; introDone=true;
+  document.body.classList.add('intro-active');   // 인트로 동안 뒤(.hero) 글자 숨김 → 겹침 방지
   const el=document.getElementById('intro');
-  const hideNow=()=>{ if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);} };
+  const hideNow=()=>{ document.body.classList.remove('intro-active'); if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);} };
   // 저장된 일정이 있으면 인트로 생략 → 바로 제주
   if(selected.length){ try{ map.jumpTo({ center:REGION.center, zoom:REGION.zoom, pitch:55, bearing:-12 }); }catch(e){} lockToJeju(); hideNow(); return; }
   // 지구본(우주)에서 제주로 부드럽게 날아옴
@@ -70,7 +71,7 @@ function startIntro(){
   setTimeout(lockToJeju, 7600);   // 도착 후 제주로 잠금
   // 오버레이: 잠시 보여주고 페이드 / 스크롤·클릭 시 즉시 시작(단 카메라 비행은 계속)
   if(!el) return;
-  const hide=()=>{ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);
+  const hide=()=>{ document.body.classList.remove('intro-active'); el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);
     removeEventListener('wheel',hide); removeEventListener('touchmove',hide); };
   el.addEventListener('click',hide);
   addEventListener('wheel',hide,{passive:true}); addEventListener('touchmove',hide,{passive:true});
