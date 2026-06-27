@@ -27,6 +27,8 @@ let mapReady = false;
 function initMap(){
   if(mapReady) return;          // 중복 방지 (load + 폴링 둘 다 호출될 수 있음)
   mapReady = true;
+  // globe 투영을 로드 후 명시 적용 (스타일이 평면으로 덮는 것 방지)
+  try{ map.setProjection({ type:'globe' }); }catch(e){ try{ map.setProjection('globe'); }catch(e2){} }
   // 실제 3D 지형 (무료 AWS terrarium DEM)
   try{
     map.addSource('dem', {
@@ -60,9 +62,10 @@ function startIntro(){
   // 저장된 일정이 있으면 인트로 생략 → 바로 제주
   if(selected.length){ try{ map.jumpTo({ center:REGION.center, zoom:REGION.zoom, pitch:55, bearing:-12 }); }catch(e){} lockToJeju(); hideNow(); return; }
   // 지구본(우주)에서 제주로 부드럽게 날아옴
+  try{ map.setProjection({ type:'globe' }); }catch(e){}
   try{
-    map.jumpTo({ center:REGION.center, zoom:2.1, pitch:0, bearing:0 });
-    map.flyTo({ center:REGION.center, zoom:9.6, pitch:56, bearing:-16, duration:7200, curve:1.42, essential:true });
+    map.jumpTo({ center:REGION.center, zoom:1.4, pitch:0, bearing:0 });
+    map.flyTo({ center:REGION.center, zoom:9.6, pitch:56, bearing:-16, duration:7600, curve:1.5, essential:true });
   }catch(e){}
   setTimeout(lockToJeju, 7600);   // 도착 후 제주로 잠금
   // 오버레이: 잠시 보여주고 페이드 / 스크롤·클릭 시 즉시 시작(단 카메라 비행은 계속)
