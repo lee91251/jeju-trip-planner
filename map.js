@@ -87,13 +87,8 @@ fetch('places_jeju.json').then(r=>r.ok?r.json():null).then(arr=>{
   if(!Array.isArray(arr)||!arr.length) return;
   TOUR=arr;
   arr.forEach(p=>{ if(!localByName[p.name]) localByName[p.name]=p; });
-  // 프리셋(큐레이션 49곳)에 관광공사 사진을 좌표로 매칭해 보강 (오설록·협재 등 사진 채우기)
-  PRESET.forEach(pr=>{
-    if(pr.img) return;
-    let best=null,bd=Infinity;
-    arr.forEach(t=>{ if(!t.img) return; const d=(t.lng-pr.lng)**2+(t.lat-pr.lat)**2; if(d<bd){bd=d;best=t;} });
-    if(best && bd < 0.000016){ pr.img=best.img; }   // 약 400m 이내면 같은 장소로 보고 사진 차용
-  });
+  // 프리셋(큐레이션 49곳)에 관광공사 사진을 '이름이 같은' 곳에서 가져와 보강
+  PRESET.forEach(pr=>{ if(!pr.img){ const im=photoForName(pr.name, pr.lng, pr.lat); if(im) pr.img=im; } });
   buildAutocompleteIndex();
   toast(`제주 관광지 ${arr.length.toLocaleString()}곳 + 사진을 불러왔어요`);
 }).catch(()=>{});
@@ -393,12 +388,27 @@ function fitTo(places, padTop){
   map.fitBounds(b, { padding:{top:(padTop||80),bottom:80,left:380,right:80}, pitch:50, bearing:-10, duration:1600, maxZoom:13 });
 }
 
-// 선택 장소에 사진이 없으면 관광공사 데이터에서 가까운(≈900m) 사진 차용
+// 관광공사 데이터에서 '이름이 일치'하는 사진만 찾음 (좌표만 가까운 옆 식당 사진 방지)
+function photoForName(name, lng, lat){
+  if(!TOUR.length) return null;
+  const nn=norm(name); if(nn.length<2) return null;
+  let best=null, bd=Infinity;
+  for(const t of TOUR){
+    if(!t.img) continue;
+    const tn=norm(t.name);
+    const nameMatch = (tn===nn) || (nn.length>=3 && tn.length>=3 && (tn.includes(nn)||nn.includes(tn)));
+    if(!nameMatch) continue;
+    const d=(t.lng-lng)**2+(t.lat-lat)**2;
+    if(d<bd){ bd=d; best=t; }
+  }
+  // 이름이 같아도 5km 넘게 떨어지면 다른 장소로 보고 제외
+  return (best && bd < 0.002) ? best.img : null;
+}
+// 선택 장소 사진 보강 (이름 일치 시에만)
 function enrichPhoto(p){
-  if(p.img || !TOUR.length) return;
-  let best=null,bd=Infinity;
-  for(const t of TOUR){ if(!t.img) continue; const d=(t.lng-p.lng)**2+(t.lat-p.lat)**2; if(d<bd){bd=d;best=t;} }
-  if(best && bd < 0.00007){ p.img=best.img; if(!p.desc) p.desc=best.desc; }   // ≈900m
+  if(p.img) return;
+  const im=photoForName(p.name, p.lng, p.lat);
+  if(im) p.img=im;
 }
 
 // ---- 일정 생성 (사용자가 지정한 일차대로) ----
@@ -449,7 +459,7 @@ function generate(autoScroll){
       const tel = p.tel ? `<div class="spot-tel">📞 ${p.tel}</div>` : '';
       sec.innerHTML=`<div class="spot" style="--c:${c}">
         <div class="spot-top"><span class="spot-no" style="background:${c}">${pi+1}</span>
-          <span class="spot-day">DAY ${d.idx} · ${d.region}</span></div>
+          <span class="spot-day">DAY ${d.idx} · ${regionOf(p)}</span></div>
         ${img}
         <h2>${(typeof ICONS!=='undefined'&&ICONS[p.cat])||'📍'} ${p.name}</h2>
         <div class="spot-meta">${meta}</div>
@@ -474,12 +484,12 @@ function focusSpot(p, gi, di, card){
   card && card.classList.add('in');
   markerObjs.forEach(m=> m.el.classList.toggle('active', m.name===p.name));
   const bearing = -12 + gi*16;   // 장소마다 살짝 회전 → 지도가 돌아가는 느낌
-  // 왼쪽 패널/카드를 피해 오른쪽 빈 공간 중앙에 장소가 오도록 offset.
-  // 모바일(좁은 화면)에선 offset 줄임.
+  // 왼쪽 카드를 피해 '남은 공간'의 중앙에 장소가 오도록 padding 사용(offset보다 직관적).
   const narrow = innerWidth < 760;
-  const off = narrow ? [0, -innerHeight*0.18] : [Math.min(190, innerWidth*0.16), -20];
+  const pad = narrow ? { top:0, bottom:Math.round(innerHeight*0.34), left:0, right:0 }
+                     : { left:Math.min(460, Math.round(innerWidth*0.32)), top:0, right:0, bottom:0 };
   map.flyTo({ center:[p.lng,p.lat], zoom:16.3, pitch:60, bearing,
-    offset:off, duration:2600, curve:1.5, speed:0.6, essential:true });
+    padding:pad, duration:2400, curve:1.5, essential:true });
 }
 
 function focusDay(d, di, card){
