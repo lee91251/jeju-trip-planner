@@ -178,7 +178,67 @@ async function addByName(q){
   }catch(e){ toast('검색 중 오류가 났어요. 잠시 후 다시 시도하세요.'); }
   finally{ $('#add').disabled=false; $('#add').textContent='추가'; }
 }
-function pushPlace(p){ p.day=activeDay; selected.push(p); renderChips(); renderDayTabs(); $('#search').value=''; hideAC(); if(DAYS.length) generate(false); else previewMarkers(); }
+function pushPlace(p){ p.day=activeDay; selected.push(p); renderChips(); renderDayTabs(); $('#search').value=''; hideAC(); if(DAYS.length) generate(false); else previewMarkers(); showNearbyFor(p); }
+
+/* ===== 주변 발견 (위치 기반 추천) ===== */
+function haversineKm(aLng,aLat,bLng,bLat){
+  const R=6371, toR=Math.PI/180;
+  const dLat=(bLat-aLat)*toR, dLng=(bLng-aLng)*toR;
+  const s=Math.sin(dLat/2)**2 + Math.cos(aLat*toR)*Math.cos(bLat*toR)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+// 좌표 반경 내, 사진 있는 장소 추천 (이미 담은 곳 제외, 가까운 순)
+function nearbyPlaces(lng, lat, radiusKm, limit){
+  const pool = (typeof TOUR!=='undefined' && TOUR.length) ? TOUR : PRESET;
+  const seen = new Set(selected.map(p=>p.name));
+  const res=[];
+  for(const p of pool){
+    if(!p.img || seen.has(p.name)) continue;
+    const d=haversineKm(lng,lat,p.lng,p.lat);
+    if(d<=radiusKm) res.push(Object.assign({_dist:d}, p));
+  }
+  res.sort((a,b)=>a._dist-b._dist);
+  return res.slice(0, limit||12);
+}
+function fmtDist(km){ return km<1 ? Math.round(km*1000)+'m' : km.toFixed(1)+'km'; }
+function renderNearby(list, title){
+  const box=$('#nearby'); if(!box) return;
+  if(!list || !list.length){ box.classList.remove('show'); box.innerHTML=''; return; }
+  box.innerHTML = `<div class="nearby-h">📍 ${title} 주변 <small>탭해서 추가</small></div>
+    <div class="nearby-row">${list.map((p,i)=>`<div class="ncard" data-i="${i}">
+      ${p.img?`<img src="${p.img}" loading="lazy" onerror="this.parentNode.classList.add('noimg')">`:''}
+      <div class="ncard-b"><div class="ncard-nm">${(typeof ICONS!=='undefined'&&ICONS[p.cat])||'📍'} ${p.name}</div>
+      <div class="ncard-meta">${[p.cat, fmtDist(p._dist)].filter(Boolean).join(' · ')}</div></div>
+    </div>`).join('')}</div>`;
+  box.classList.add('show');
+  box.querySelectorAll('.ncard').forEach(el=>{ el.onclick=()=>addNearby(list[+el.dataset.i]); });
+}
+function addNearby(p){ const o=Object.assign({},p); delete o._dist; pushPlace(o); }
+function showNearbyFor(p){ if(!p) return; renderNearby(nearbyPlaces(p.lng,p.lat,3,12), p.name); }
+
+// 내 위치(GPS)로 주변 발견
+let myLocMarker=null;
+function findNearMe(){
+  if(!navigator.geolocation){ toast('이 기기는 위치를 지원하지 않아요.'); return; }
+  toast('내 위치를 찾는 중…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lng=pos.coords.longitude, lat=pos.coords.latitude;
+    // 제주 밖이면 제주 중심 기준으로 안내
+    const inJeju = lng>125.9&&lng<127.4&&lat>32.9&&lat<33.8;
+    if(myLocMarker) myLocMarker.remove();
+    const el=document.createElement('div'); el.className='myloc';
+    myLocMarker=new maplibregl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
+    if(inJeju){
+      try{ map.flyTo({ center:[lng,lat], zoom:14, pitch:55, duration:1600, essential:true }); }catch(e){}
+      renderNearby(nearbyPlaces(lng,lat,3,12), '내 위치');
+      toast('내 주변 추천을 찾았어요!');
+    } else {
+      toast('지금은 제주 밖이네요. 제주 장소를 검색하거나 추가해 보세요.');
+    }
+  }, err=>{
+    toast('위치 권한을 허용해 주세요 (브라우저 주소창의 위치 아이콘).');
+  }, { enableHighAccuracy:true, timeout:9000, maximumAge:60000 });
+}
 
 /* ===== 검색 자동완성 ===== */
 let AC_INDEX = [];   // {name, norm, place}
@@ -558,6 +618,7 @@ $('#search').addEventListener('keydown', e=>{
 $('#search').addEventListener('focus', e=>{ if(e.target.value) renderAC(e.target.value); });
 document.addEventListener('click', e=>{ if(!e.target.closest('.searchbox')) hideAC(); });
 $('#gen').onclick=()=>generate(true);
+$('#nearme')?.addEventListener('click', findNearMe);
 $('#toggle').onclick=()=>$('#panel').classList.toggle('min');
 $('#reset').onclick=resetAll;
 

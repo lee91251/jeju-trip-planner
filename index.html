@@ -163,6 +163,29 @@
   .ac-empty{padding:11px 12px; font-size:13px; color:#7fa6c4;}
   .ac-sec{padding:6px 12px 3px; font-size:11px; font-weight:700; color:#7fb0d0; background:rgba(255,255,255,.03);}
 
+  /* 내 주변 발견 */
+  .nearme-btn{width:100%; margin-bottom:10px; background:rgba(45,212,191,.14); border-color:rgba(45,212,191,.4); color:#bff6ee;}
+  .nearme-btn:hover{background:rgba(45,212,191,.24);}
+  .nearby{display:none; margin-bottom:12px;}
+  .nearby.show{display:block; animation:introUp .4s ease both;}
+  .nearby-h{font-size:12px; font-weight:700; color:#cfe6f5; margin-bottom:7px;}
+  .nearby-h small{font-weight:500; color:#6f96b4; margin-left:4px;}
+  .nearby-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;}
+  .nearby-row::-webkit-scrollbar{height:6px;} .nearby-row::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15); border-radius:3px;}
+  .ncard{flex:0 0 122px; width:122px; background:#0c1c2e; border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    cursor:pointer; transition:transform .16s cubic-bezier(.2,.8,.2,1), border-color .16s;}
+  .ncard:hover{transform:translateY(-2px); border-color:var(--accent);}
+  .ncard img{width:100%; height:78px; object-fit:cover; display:block; background:rgba(255,255,255,.05);}
+  .ncard.noimg img{display:none;}
+  .ncard.noimg::before{content:'📍'; display:block; height:78px; display:grid; place-items:center; font-size:24px; background:rgba(255,255,255,.05);}
+  .ncard-b{padding:7px 9px;}
+  .ncard-nm{font-size:12px; font-weight:700; color:var(--ink); line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ncard-meta{font-size:10px; color:#8fb6d2; margin-top:2px;}
+
+  /* 내 위치 마커(파란 점 + 펄스) */
+  .myloc{width:16px; height:16px; border-radius:50%; background:#3b82f6; border:3px solid #fff; box-shadow:0 0 0 0 rgba(59,130,246,.6); animation:locPulse 2s infinite;}
+  @keyframes locPulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55);} 70%{box-shadow:0 0 0 16px rgba(59,130,246,0);} 100%{box-shadow:0 0 0 0 rgba(59,130,246,0);}}
+
   .quick{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
   .quick span{font-size:12px; padding:5px 9px; border-radius:8px; cursor:pointer; background:rgba(255,255,255,.05); border:1px solid var(--line); color:#b7d4e8;}
   .quick span:hover{background:rgba(251,191,36,.2); border-color:var(--accent2);}
@@ -260,6 +283,8 @@
       </div>
       <div id="ac" class="ac"></div>
     </div>
+    <button class="btn ghost nearme-btn" id="nearme">📍 내 주변 발견</button>
+    <div id="nearby" class="nearby"></div>
     <div class="quick" id="quick"></div>
 
     <details class="reco2">
