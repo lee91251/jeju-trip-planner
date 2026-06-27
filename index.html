@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>여행 플래너 · 실제 지도</title>
-<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet" />
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
   :root{
@@ -16,6 +16,29 @@
   body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif; color:var(--ink); background:#06121f;}
   #map{position:fixed; inset:0; z-index:0;}
   .maplibregl-ctrl-attrib{font-size:10px;}
+
+  /* ===== 프리미엄 폴리시 (마이크로 인터랙션) ===== */
+  .btn{transition:transform .18s cubic-bezier(.2,.8,.2,1), filter .18s, box-shadow .18s, background .18s;}
+  .btn:hover{transform:translateY(-1.5px); box-shadow:0 6px 18px rgba(45,212,191,.25);}
+  .btn.ghost:hover{box-shadow:0 6px 18px rgba(0,0,0,.3); background:rgba(255,255,255,.14);}
+  .gen-btn{box-shadow:0 8px 24px rgba(45,212,191,.3); letter-spacing:.02em;}
+  .gen-btn:hover{box-shadow:0 12px 32px rgba(45,212,191,.45);}
+  .chip{transition:transform .16s cubic-bezier(.2,.8,.2,1), border-color .16s, background .16s;}
+  .chip:hover{transform:translateY(-1px); background:rgba(45,212,191,.24);}
+  .reco-card{transition:transform .2s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .2s;}
+  .reco-card:hover{box-shadow:0 10px 28px rgba(0,0,0,.35);}
+  .daytab{transition:transform .16s, background .25s, color .25s, box-shadow .2s;}
+  .daytab:hover{transform:translateY(-1px);}
+  .daytab.on{box-shadow:0 6px 18px rgba(0,0,0,.3);}
+  .spot{transition:opacity .6s cubic-bezier(.2,.8,.2,1), transform .6s cubic-bezier(.2,.8,.2,1), box-shadow .3s;}
+  .spot:hover{box-shadow:0 24px 64px rgba(0,0,0,.55);}
+  .mk{transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s;}
+  .mk:hover{box-shadow:0 8px 20px rgba(0,0,0,.5);}
+  #search{transition:border-color .2s, background .2s, box-shadow .2s;}
+  #search:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(45,212,191,.15);}
+  /* 패널 부드러운 등장 */
+  #panel{animation:panelIn .9s .2s cubic-bezier(.2,.8,.2,1) both;}
+  @keyframes panelIn{from{opacity:0; transform:translateX(-16px);} to{opacity:1; transform:none;}}
 
   /* ===== 시네마틱 인트로 ===== */
   #intro{position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
@@ -282,7 +305,7 @@
 
   <div class="credit">prototype v2 · MapLibre · 지도 © OpenFreeMap·OSM</div>
 
-<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="data.js"></script>

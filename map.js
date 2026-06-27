@@ -11,11 +11,12 @@ const REGION = {
 };
 
 // ---- 지도 초기화 (토큰 불필요) ----
+// 지구본(globe)에서 시작 → 인트로에서 제주로 날아온 뒤 제주로 잠금(maxBounds)
 const map = new maplibregl.Map({
   container: 'map',
   style: 'https://tiles.openfreemap.org/styles/liberty',
-  center: REGION.center, zoom: REGION.zoom, minZoom: REGION.minZoom,
-  pitch: 55, bearing: -12, maxBounds: REGION.maxBounds,
+  projection: { type:'globe' },
+  center: REGION.center, zoom: 2.1, pitch: 0, bearing: 0,
   attributionControl: { compact: true }
 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'bottom-right');
@@ -49,24 +50,28 @@ function initMap(){
 }
 map.on('load', initMap);
 
-// ===== 시네마틱 인트로 (영화처럼 천천히 들어오는 오프닝) =====
+// ===== 시네마틱 인트로 (지구본 → 제주로 날아오는 오프닝) =====
 let introDone=false;
+function lockToJeju(){ try{ map.setMaxBounds(REGION.maxBounds); map.setMinZoom(REGION.minZoom); }catch(e){} }
 function startIntro(){
   if(introDone) return; introDone=true;
-  // 저장된 일정이 있으면 인트로 생략(바로 일정 보기)
-  if(selected.length){ const el=document.getElementById('intro'); if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200); } return; }
-  // 카메라: 높은 곳에서 천천히 기울이며 줌인 (7초, 부드러운 ease-out)
+  const el=document.getElementById('intro');
+  const hideNow=()=>{ if(el){ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);} };
+  // 저장된 일정이 있으면 인트로 생략 → 바로 제주
+  if(selected.length){ try{ map.jumpTo({ center:REGION.center, zoom:REGION.zoom, pitch:55, bearing:-12 }); }catch(e){} lockToJeju(); hideNow(); return; }
+  // 지구본(우주)에서 제주로 부드럽게 날아옴
   try{
-    map.jumpTo({ center:REGION.center, zoom:8.3, pitch:0, bearing:8 });
-    map.easeTo({ center:REGION.center, zoom:9.6, pitch:58, bearing:-16, duration:7000, easing:t=>1-Math.pow(1-t,3), essential:true });
+    map.jumpTo({ center:REGION.center, zoom:2.1, pitch:0, bearing:0 });
+    map.flyTo({ center:REGION.center, zoom:9.6, pitch:56, bearing:-16, duration:7200, curve:1.42, essential:true });
   }catch(e){}
-  // 인트로 오버레이: 잠시 보여주고 페이드 / 스크롤·클릭 시 즉시 시작
-  const el=document.getElementById('intro'); if(!el) return;
+  setTimeout(lockToJeju, 7600);   // 도착 후 제주로 잠금
+  // 오버레이: 잠시 보여주고 페이드 / 스크롤·클릭 시 즉시 시작(단 카메라 비행은 계속)
+  if(!el) return;
   const hide=()=>{ el.classList.add('hide'); setTimeout(()=>el&&(el.style.display='none'),1200);
     removeEventListener('wheel',hide); removeEventListener('touchmove',hide); };
   el.addEventListener('click',hide);
   addEventListener('wheel',hide,{passive:true}); addEventListener('touchmove',hide,{passive:true});
-  setTimeout(hide, 4600);
+  setTimeout(hide, 5200);
 }
 // 안전장치: load 이벤트가 안 떠도 스타일이 준비되면 진행
 (function poll(){ if(mapReady) return; if(map.isStyleLoaded()) initMap(); else setTimeout(poll, 400); })();
