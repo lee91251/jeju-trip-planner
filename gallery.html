@@ -3,33 +3,30 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>제주 디오라마 — 통짜 섬</title>
+<title>제주 디오라마 — 비율 조정본</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:#0a121c; color:#eaf6ff; font-family:"Pretendard",sans-serif; padding:28px 18px 60px; text-align:center;}
-  h1{font-size:clamp(22px,4vw,34px); font-weight:800; letter-spacing:-.02em;}
-  p.sub{color:#9fc3dd; margin:10px 0 26px; font-size:15px; line-height:1.6;}
-  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(440px,1fr)); gap:18px; max-width:1300px; margin:0 auto;}
-  .card{background:#0f1d2c; border:1px solid rgba(255,255,255,.1); border-radius:16px; overflow:hidden; box-shadow:0 14px 40px rgba(0,0,0,.4); position:relative;}
-  .card.best{border-color:#36e0c8; box-shadow:0 0 0 2px #36e0c8, 0 14px 40px rgba(0,0,0,.5);}
-  .card img{width:100%; display:block; aspect-ratio:16/9; object-fit:cover;}
-  .tag{display:flex; align-items:center; justify-content:space-between; padding:13px 16px;}
-  .tag b{font-size:20px; color:#36e0c8;}
-  .tag span{font-size:13px; color:#9fc3dd;}
-  .pick{position:absolute; top:10px; left:10px; background:#36e0c8; color:#04222a; font-weight:800; font-size:12px; padding:4px 10px; border-radius:999px;}
-  .foot{margin-top:30px; color:#7fa6c4; font-size:14px; line-height:1.7;}
+  h1{font-size:clamp(22px,4vw,32px); font-weight:800; letter-spacing:-.02em;}
+  p.sub{color:#9fc3dd; margin:10px auto 24px; font-size:15px; line-height:1.65; max-width:760px;}
+  .hero{max-width:980px; margin:0 auto; border:2px solid #36e0c8; border-radius:18px; overflow:hidden; box-shadow:0 0 0 2px rgba(54,224,200,.25), 0 18px 50px rgba(0,0,0,.5);}
+  .hero img{width:100%; display:block;}
+  .row{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; max-width:980px; margin:22px auto 0;}
+  .chip{background:#0f1d2c; border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:12px 16px; font-size:14px; color:#cfe6f7; flex:1 1 220px;}
+  .chip b{color:#36e0c8;}
+  .foot{margin-top:26px; color:#7fa6c4; font-size:14px; line-height:1.7;}
 </style>
 </head>
 <body>
-  <h1>🌋 흰 탑·항구 제거 + 백록담 자연스럽게</h1>
-  <p class="sub">어색했던 <b>흰 기둥(돛대/굴뚝)·항구</b>를 전부 빼고, 백록담을 <b>구멍 대신 완만한 화구</b>로 다시 만들었습니다.<br/>"2번 확정" 처럼 알려주시면 그걸로 솟아오르는 인트로를 만듭니다.</p>
-  <div class="grid">
-    <div class="card"><img src="jejuD_201.jpg" alt="1"><div class="tag"><b>1</b><span>탑·항구 없음 · 정상 부드러움 (배경에 다른 땅 약간)</span></div></div>
-    <div class="card best"><span class="pick">제 추천</span><img src="jejuD_202.jpg" alt="2"><div class="tag"><b>2</b><span>가장 깔끔한 통짜 화산섬 + 흰 파도 띠 (구멍 없음)</span></div></div>
-    <div class="card"><img src="jejuD_203.jpg" alt="3"><div class="tag"><b>3</b><span>얕은 백록담 화구호(파란 호수) 또렷 · 주변 바위섬</span></div></div>
-    <div class="card"><img src="jejuD_204.jpg" alt="4"><div class="tag"><b>4</b><span>화구 깊음 → "섬 안의 섬" 느낌 (비추천)</span></div></div>
+  <h1>🌋 비율 조정본 — 평지3 : 한라산5 : 백록담2</h1>
+  <p class="sub">섬을 더 키우고, 산자락과 바다 사이에 <b>넓은 들판(유채밭·밭)</b>을 넣었습니다.<br/>흰 탑·항구 없음 · 섬 안의 물 없음 · 디테일 복원.</p>
+  <div class="hero"><img src="jejuE_312.jpg" alt="제주 디오라마" /></div>
+  <div class="row">
+    <div class="chip"><b>평지·해안</b><br/>산 아래 넓은 들판 + 해변</div>
+    <div class="chip"><b>한라산</b><br/>가운데 완만한 방패형 화산</div>
+    <div class="chip"><b>백록담</b><br/>정상 화구 (더 깊게 원하면 조정)</div>
   </div>
-  <p class="foot">이미지: Pollinations.ai (무료 생성) · 다음 = 고른 이미지로 "바다에서 솟아오르는 인트로".<br/>※ 완전 360 회전(뒷면)은 정지 그림으론 불가 → AI 영상/3D 변환 필요(원하시면 별도 진행).</p>
+  <p class="foot">이 이미지로 OK면 "확정" 한마디 → 바다에서 솟아오르는 인트로 제작.<br/>백록담만 더 깊게 등 부분 수정도 말씀만 하세요. · 이미지: Pollinations.ai(무료)</p>
 </body>
 </html>
