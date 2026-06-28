@@ -5,7 +5,7 @@ const W = 216, D = 180;                 // 평면 크기(scene units)
 const lngSpan = B.lng1-B.lng0, latSpan = B.lat1-B.lat0;
 const lngMid = (B.lng0+B.lng1)/2, latMid = (B.lat0+B.lat1)/2;
 const MPERUNIT = 98000 / W;             // 1 unit ≈ 454m
-const EXAG = 14;                        // 고도 과장(드라마)
+const EXAG = 8;                         // 고도 과장(자연스럽게 — 피노키오 방지)
 // lng/lat → scene (핀 배치용)
 const toX = lng => (lng - lngMid)/lngSpan * W;
 const toZ = lat => -(lat - latMid)/latSpan * D;
@@ -25,7 +25,7 @@ const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.08;
 renderer.outputEncoding = THREE.sRGBEncoding;
 document.getElementById('c').appendChild(renderer.domElement);
 
@@ -39,10 +39,15 @@ key.shadow.camera.far=900; key.shadow.bias=-0.0005;
 scene.add(key);
 const rim = new THREE.DirectionalLight(0x5fb0ff, 0.7); rim.position.set(-120,70,-140); scene.add(rim);
 
-/* ---- 둘레 바다 (위성 타일 바깥을 채움) ---- */
-const ocean = new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),
-  new THREE.MeshStandardMaterial({ color:0x0a2a42, roughness:0.95, metalness:0.0 }));
-ocean.rotation.x=-Math.PI/2; ocean.position.y=-0.3; ocean.receiveShadow=true; scene.add(ocean);
+/* ---- 둘레 바다 (출렁이는 물결) ---- */
+const oceanGeo = new THREE.PlaneGeometry(5200, 5200, 90, 90);
+oceanGeo.rotateX(-Math.PI/2);
+const ocean = new THREE.Mesh(oceanGeo,
+  new THREE.MeshStandardMaterial({ color:0x0c3050, roughness:0.85, metalness:0.1 }));
+ocean.position.y = -0.5; ocean.receiveShadow = true; scene.add(ocean);
+const oPos = oceanGeo.attributes.position;
+const oBaseX = [], oBaseZ = [];
+for(let i=0;i<oPos.count;i++){ oBaseX.push(oPos.getX(i)); oBaseZ.push(oPos.getZ(i)); }
 
 /* ---- 카메라 ---- */
 const REST_R=126, REST_H=86;
@@ -93,17 +98,31 @@ function buildTerrain(){
   const mat=new THREE.MeshStandardMaterial({ map:satTex, roughness:1.0, metalness:0.0 });
   terrain=new THREE.Mesh(geo,mat);
   terrain.castShadow=terrain.receiveShadow=true;
-  terrain.scale.y = STILL ? 1 : 0.02;     // 평평한 지도 → 솟아오름
-  scene.add(terrain);
-  if(!STILL) gsap.to(terrain.scale,{ y:1, duration:3.2, delay:0.6, ease:'power3.out' });
+  // 섬을 그룹에 담아 '통째로' 바다에서 들어올림 (꼭대기만 나오는 피노키오 방지)
+  landGroup.add(terrain);
+  landGroup.position.y = STILL ? 0 : -52;   // 물속에서 시작
+  if(!STILL){
+    gsap.to(landGroup.position, { y:0, duration:3.6, delay:0.5, ease:'power2.out' });
+    waveCtrl.a = 5.0;                                  // 솟아오를 때 물 크게 출렁
+    gsap.to(waveCtrl, { a:1.4, duration:4.0, delay:0.6, ease:'power2.out' });  // → 잔잔하게
+  }
 }
+const landGroup = new THREE.Group(); scene.add(landGroup);
+const waveCtrl = { a:1.4 };
 
-let last=performance.now();
+let last=performance.now(), tsec=0;
 function animate(now){
   requestAnimationFrame(animate);
   if(paused) return;
-  const dt=Math.min((now-last)/1000,0.05); last=now;
+  const dt=Math.min((now-last)/1000,0.05); last=now; tsec+=dt;
   if(autoRotate) orbit += dt*0.05;
+  // 바다 물결
+  const a=waveCtrl.a;
+  for(let i=0;i<oPos.count;i++){
+    const x=oBaseX[i], z=oBaseZ[i];
+    oPos.setY(i, Math.sin(x*0.012+tsec*1.3)*Math.cos(z*0.015+tsec*1.1)*a + Math.sin(x*0.04+z*0.03+tsec*2)*a*0.3);
+  }
+  oPos.needsUpdate = true;
   placeCamera();
   renderer.render(scene,camera);
 }
