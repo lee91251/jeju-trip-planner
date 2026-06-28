@@ -8,12 +8,12 @@ const scene = new THREE.Scene();
 (function(){
   const cnv=document.createElement('canvas'); cnv.width=4; cnv.height=512;
   const g=cnv.getContext('2d'), grd=g.createLinearGradient(0,0,0,512);
-  grd.addColorStop(0,'#020912'); grd.addColorStop(0.55,'#06182a'); grd.addColorStop(0.82,'#0d3550'); grd.addColorStop(1,'#16557a');
+  grd.addColorStop(0,'#01060d'); grd.addColorStop(0.55,'#04101d'); grd.addColorStop(0.85,'#0a2a40'); grd.addColorStop(1,'#114863');
   g.fillStyle=grd; g.fillRect(0,0,4,512);
   const tex=new THREE.CanvasTexture(cnv); tex.encoding=THREE.sRGBEncoding;
   scene.background=tex;
 })();
-scene.fog = new THREE.FogExp2(0x07182a, 0.0017);
+scene.fog = new THREE.FogExp2(0x07182a, 0.0005);   // 안개 대폭 줄임 (또렷하게)
 
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 1, 5000);
 
@@ -23,12 +23,12 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;   // 시네마틱
-renderer.toneMappingExposure = 0.92;
+renderer.toneMappingExposure = 0.88;
 renderer.outputEncoding = THREE.sRGBEncoding;
 document.getElementById('c').appendChild(renderer.domElement);
 
 /* ---- 조명 (영화 같은 3점 조명, 대비 강조) ---- */
-scene.add(new THREE.HemisphereLight(0x8fbfff, 0x0a1620, 0.45));
+scene.add(new THREE.HemisphereLight(0x7fb4ff, 0x08131c, 0.22));
 const key = new THREE.DirectionalLight(0xffdcab, 2.5);   // 따뜻한 석양빛 (측면·낮게 → 긴 그림자)
 key.position.set(175, 95, 60);
 key.castShadow = true;
@@ -41,10 +41,10 @@ rim.position.set(-150, 80, -150); scene.add(rim);
 const fill = new THREE.DirectionalLight(0x7df0dc, 0.3);
 fill.position.set(-60, 50, 130); scene.add(fill);
 
-/* ---- 바다 (깊고 잔잔, 은은한 반사) ---- */
+/* ---- 바다 (무광 지도색 — 반사 얼룩 없이 깔끔) ---- */
 const ocean = new THREE.Mesh(
   new THREE.PlaneGeometry(6000,6000),
-  new THREE.MeshStandardMaterial({ color:0x071b30, roughness:0.42, metalness:0.5 })
+  new THREE.MeshStandardMaterial({ color:0x14517a, roughness:0.9, metalness:0.0 })
 );
 ocean.rotation.x = -Math.PI/2; ocean.position.y = -0.5; ocean.receiveShadow = true;
 scene.add(ocean);
@@ -63,7 +63,7 @@ const islandGeo = new THREE.PlaneGeometry(bw, bd, SEG, SEG);
 islandGeo.rotateX(-Math.PI/2);
 const pos = islandGeo.attributes.position;
 const colors = [];
-const cCoast=new THREE.Color(0x53b89a), cLow=new THREE.Color(0x3a9456), cMid=new THREE.Color(0x277a43), cHigh=new THREE.Color(0x5c9a5a), cSnow=new THREE.Color(0xf2f8ff);
+const cCoast=new THREE.Color(0x37c79a), cLow=new THREE.Color(0x2aa84e), cMid=new THREE.Color(0x14823a), cHigh=new THREE.Color(0x4f9a48), cSnow=new THREE.Color(0xffffff);
 const PEAK=40, RANGE=Math.max(maxX-minX,maxZ-minZ)*0.50;
 for(let i=0;i<pos.count;i++){
   const x=pos.getX(i)+bcx, z=pos.getZ(i)+bcz;
@@ -89,7 +89,6 @@ islandGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
 islandGeo.computeVertexNormals();
 const island = new THREE.Mesh(islandGeo, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.95, metalness:0.0 }));
 island.castShadow = island.receiveShadow = true;
-scene.add(island);
 
 // 해안 라인(시안 글로우 테두리)
 const edgePts = JEJU_OUTLINE.map(([lng,lat])=> new THREE.Vector3(toX(lng), 2.2, toZ(lat)));
@@ -98,7 +97,19 @@ const edgeLine = new THREE.Line(
   new THREE.BufferGeometry().setFromPoints(edgePts),
   new THREE.LineBasicMaterial({ color:0x7af0e0, transparent:true, opacity:0.7 })
 );
-scene.add(edgeLine);
+
+// 섬 = 하나의 그룹 (바다에서 솟아오르는 애니메이션용)
+const land = new THREE.Group();
+land.add(island); land.add(edgeLine);
+scene.add(land);
+// ?still 이면 솟아오름 생략(정지 상태 확인용), 평소엔 바다에서 떠오름
+const STILL = new URLSearchParams(location.search).has('still');
+if(STILL){ land.position.y = 0; }
+else {
+  land.position.y = -78;   // 시작: 물 아래
+  // 화산섬이 푸른 바다에서 신비롭게 떠오름 (탄생 — 폭발/재난 아님)
+  gsap.to(land.position, { y:0, duration:3.6, delay:0.5, ease:'power3.out' });
+}
 
 /* ---- 카메라 시네마틱 무빙 (살짝 기운 항공 뷰) ---- */
 const REST_R=140, REST_H=98;
