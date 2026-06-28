@@ -1,155 +1,113 @@
-/* ===== 제주 3D — 시네마틱 양식화 지도 (Three.js) ===== */
-const CENTER_LNG=126.55, CENTER_LAT=33.38, SCALE=260, THICK=8;
-const toX = lng => (lng-CENTER_LNG)*SCALE;
-const toZ = lat => -(lat-CENTER_LAT)*SCALE;
+/* ===== 제주 3D — 실제 고도(DEM) + 위성 텍스처 (Three.js) ===== */
+// bbox (fetch_terrain.py 출력과 일치)
+const B = { lng0:126.03516, lng1:127.08984, lat0:32.99024, lat1:33.72434 };
+const W = 216, D = 180;                 // 평면 크기(scene units)
+const lngSpan = B.lng1-B.lng0, latSpan = B.lat1-B.lat0;
+const lngMid = (B.lng0+B.lng1)/2, latMid = (B.lat0+B.lat1)/2;
+const MPERUNIT = 98000 / W;             // 1 unit ≈ 454m
+const EXAG = 14;                        // 고도 과장(드라마)
+// lng/lat → scene (핀 배치용)
+const toX = lng => (lng - lngMid)/lngSpan * W;
+const toZ = lat => -(lat - latMid)/latSpan * D;
 
 const scene = new THREE.Scene();
-// 하늘 그라데이션 배경 (수평선 글로우 → 어두운 위)
 (function(){
   const cnv=document.createElement('canvas'); cnv.width=4; cnv.height=512;
   const g=cnv.getContext('2d'), grd=g.createLinearGradient(0,0,0,512);
-  grd.addColorStop(0,'#01060d'); grd.addColorStop(0.55,'#04101d'); grd.addColorStop(0.85,'#0a2a40'); grd.addColorStop(1,'#114863');
+  grd.addColorStop(0,'#01060d'); grd.addColorStop(0.55,'#04101d'); grd.addColorStop(0.85,'#0a2a40'); grd.addColorStop(1,'#0f4258');
   g.fillStyle=grd; g.fillRect(0,0,4,512);
-  const tex=new THREE.CanvasTexture(cnv); tex.encoding=THREE.sRGBEncoding;
-  scene.background=tex;
+  const tex=new THREE.CanvasTexture(cnv); tex.encoding=THREE.sRGBEncoding; scene.background=tex;
 })();
-scene.fog = new THREE.FogExp2(0x07182a, 0.0005);   // 안개 대폭 줄임 (또렷하게)
+scene.fog = new THREE.FogExp2(0x081a2c, 0.0006);
 
-const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 1, 5000);
-
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 1, 6000);
 const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;   // 시네마틱
-renderer.toneMappingExposure = 0.88;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 renderer.outputEncoding = THREE.sRGBEncoding;
 document.getElementById('c').appendChild(renderer.domElement);
 
-/* ---- 조명 (영화 같은 3점 조명, 대비 강조) ---- */
-scene.add(new THREE.HemisphereLight(0x7fb4ff, 0x08131c, 0.22));
-const key = new THREE.DirectionalLight(0xffdcab, 2.5);   // 따뜻한 석양빛 (측면·낮게 → 긴 그림자)
-key.position.set(175, 95, 60);
-key.castShadow = true;
+/* ---- 조명 (위성 텍스처라 부드럽게 + 입체용 키라이트) ---- */
+scene.add(new THREE.HemisphereLight(0xbcd8ff, 0x14202a, 0.7));
+const key = new THREE.DirectionalLight(0xfff0d6, 1.7);
+key.position.set(120, 160, 80); key.castShadow=true;
 key.shadow.mapSize.set(2048,2048);
-key.shadow.camera.left=-280; key.shadow.camera.right=280; key.shadow.camera.top=280; key.shadow.camera.bottom=-280;
-key.shadow.camera.far=900; key.shadow.bias=-0.0004; key.shadow.radius=4;
+key.shadow.camera.left=-200; key.shadow.camera.right=200; key.shadow.camera.top=200; key.shadow.camera.bottom=-200;
+key.shadow.camera.far=900; key.shadow.bias=-0.0005;
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x46c2ff, 1.7);   // 차가운 림라이트(뒤에서 윤곽 글로우)
-rim.position.set(-150, 80, -150); scene.add(rim);
-const fill = new THREE.DirectionalLight(0x7df0dc, 0.3);
-fill.position.set(-60, 50, 130); scene.add(fill);
+const rim = new THREE.DirectionalLight(0x5fb0ff, 0.7); rim.position.set(-120,70,-140); scene.add(rim);
 
-/* ---- 바다 (무광 지도색 — 반사 얼룩 없이 깔끔) ---- */
-const ocean = new THREE.Mesh(
-  new THREE.PlaneGeometry(6000,6000),
-  new THREE.MeshStandardMaterial({ color:0x14517a, roughness:0.9, metalness:0.0 })
-);
-ocean.rotation.x = -Math.PI/2; ocean.position.y = -0.5; ocean.receiveShadow = true;
-scene.add(ocean);
+/* ---- 둘레 바다 (위성 타일 바깥을 채움) ---- */
+const ocean = new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),
+  new THREE.MeshStandardMaterial({ color:0x0a2a42, roughness:0.95, metalness:0.0 }));
+ocean.rotation.x=-Math.PI/2; ocean.position.y=-0.3; ocean.receiveShadow=true; scene.add(ocean);
 
-/* ---- 제주 섬 (실제 윤곽 + 한라산이 솟는 높이지형) ---- */
-const hx=toX(HALLASAN.lng), hz=toZ(HALLASAN.lat);
-const poly = JEJU_OUTLINE.map(([lng,lat])=>[toX(lng), toZ(lat)]);
-const xsv=poly.map(p=>p[0]), zsv=poly.map(p=>p[1]);
-const minX=Math.min(...xsv),maxX=Math.max(...xsv),minZ=Math.min(...zsv),maxZ=Math.max(...zsv);
-const padXZ=10, bw=(maxX-minX)+padXZ*2, bd=(maxZ-minZ)+padXZ*2, bcx=(minX+maxX)/2, bcz=(minZ+maxZ)/2;
-function inPoly(x,z){ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i][0],zi=poly[i][1],xj=poly[j][0],zj=poly[j][1]; if(((zi>z)!==(zj>z)) && (x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi)) c=!c; } return c; }
-function distToEdge(x,z){ let m=1e9; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const ax=poly[j][0],az=poly[j][1],bx=poly[i][0],bz=poly[i][1]; const dx=bx-ax,dz=bz-az; const t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/((dx*dx+dz*dz)||1e-9))); const px=ax+t*dx,pz=az+t*dz; const d=Math.hypot(x-px,z-pz); if(d<m)m=d; } return m; }
-
-const SEG=150;
-const islandGeo = new THREE.PlaneGeometry(bw, bd, SEG, SEG);
-islandGeo.rotateX(-Math.PI/2);
-const pos = islandGeo.attributes.position;
-const colors = [];
-const cCoast=new THREE.Color(0x37c79a), cLow=new THREE.Color(0x2aa84e), cMid=new THREE.Color(0x14823a), cHigh=new THREE.Color(0x4f9a48), cSnow=new THREE.Color(0xffffff);
-const PEAK=40, RANGE=Math.max(maxX-minX,maxZ-minZ)*0.50;
-for(let i=0;i<pos.count;i++){
-  const x=pos.getX(i)+bcx, z=pos.getZ(i)+bcz;
-  pos.setX(i,x); pos.setZ(i,z);
-  const inside=inPoly(x,z);
-  let y, col=new THREE.Color();
-  if(inside){
-    const dPeak=Math.hypot(x-hx,z-hz);
-    const t=Math.max(0,1-dPeak/RANGE); const dome=t*t*(3-2*t);     // 가운데로 갈수록 솟음
-    const edge=Math.min(1, distToEdge(x,z)/22);                    // 해안은 완만하게(절벽 방지)
-    const ridge=(Math.sin(x*0.05)*Math.cos(z*0.06)+Math.sin(x*0.11+z*0.04)*0.5)*1.3;
-    y = 1.2 + PEAK*dome*edge + ridge*edge + 2.5*edge;
-    const hN=Math.min(1, y/(PEAK*0.95));
-    if(hN<0.18) col.copy(cCoast).lerp(cLow, hN/0.18);
-    else if(hN<0.55) col.copy(cLow).lerp(cMid,(hN-0.18)/0.37);
-    else if(hN<0.88) col.copy(cMid).lerp(cHigh,(hN-0.55)/0.33);
-    else col.copy(cHigh).lerp(cSnow, Math.min(1,(hN-0.88)/0.12));
-  } else { y=-6; col.copy(cCoast).multiplyScalar(0.25); }
-  pos.setY(i,y);
-  colors.push(col.r,col.g,col.b);
-}
-islandGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
-islandGeo.computeVertexNormals();
-const island = new THREE.Mesh(islandGeo, new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.95, metalness:0.0 }));
-island.castShadow = island.receiveShadow = true;
-
-// 해안 라인(시안 글로우 테두리)
-const edgePts = JEJU_OUTLINE.map(([lng,lat])=> new THREE.Vector3(toX(lng), 2.2, toZ(lat)));
-edgePts.push(edgePts[0].clone());
-const edgeLine = new THREE.Line(
-  new THREE.BufferGeometry().setFromPoints(edgePts),
-  new THREE.LineBasicMaterial({ color:0x7af0e0, transparent:true, opacity:0.7 })
-);
-
-// 섬 = 하나의 그룹 (바다에서 솟아오르는 애니메이션용)
-const land = new THREE.Group();
-land.add(island); land.add(edgeLine);
-scene.add(land);
-// ?still 이면 솟아오름 생략(정지 상태 확인용), 평소엔 바다에서 떠오름
-const STILL = new URLSearchParams(location.search).has('still');
-if(STILL){ land.position.y = 0; }
-else {
-  land.position.y = -78;   // 시작: 물 아래
-  // 화산섬이 푸른 바다에서 신비롭게 떠오름 (탄생 — 폭발/재난 아님)
-  gsap.to(land.position, { y:0, duration:3.6, delay:0.5, ease:'power3.out' });
-}
-
-/* ---- 카메라 시네마틱 무빙 (살짝 기운 항공 뷰) ---- */
-const REST_R=140, REST_H=98;
-const camTarget = new THREE.Vector3(0, 7, 0);
-let orbit = 0.42, radius = REST_R, height = REST_H;
-let autoRotate = true, paused = false;
-
+/* ---- 카메라 ---- */
+const REST_R=126, REST_H=86;
+const camTarget = new THREE.Vector3(0, 9, 0);
+let orbit=0.5, radius=REST_R, height=REST_H, autoRotate=true, paused=false;
 function placeCamera(){
-  camera.position.set(
-    camTarget.x + Math.sin(orbit)*radius,
-    camTarget.y + height,
-    camTarget.z + Math.cos(orbit)*radius
-  );
+  camera.position.set(camTarget.x+Math.sin(orbit)*radius, camTarget.y+height, camTarget.z+Math.cos(orbit)*radius);
   camera.lookAt(camTarget);
 }
 placeCamera();
+gsap.fromTo({r:430,h:360},{r:430,h:360},{r:REST_R,h:REST_H,duration:3.4,ease:'power2.out',
+  onUpdate:function(){const t=this.targets()[0];radius=t.r;height=t.h;}});
 
-// 인트로: 멀리서 천천히 내려오며 자리잡기 (최종값 REST_R/REST_H로)
-gsap.fromTo({r:460, h:430}, {r:460,h:430}, {
-  r:REST_R, h:REST_H, duration:3.4, ease:'power2.out',
-  onUpdate:function(){ const t=this.targets()[0]; radius=t.r; height=t.h; },
-});
+const STILL = new URLSearchParams(location.search).has('still');
 
-let last = performance.now();
+/* ---- 실제 지형: DEM로 높이, 위성으로 색 ---- */
+let terrain=null;
+const satTex = new THREE.TextureLoader().load('jeju_sat.jpg', t=>{ t.encoding=THREE.sRGBEncoding; });
+const demImg = new Image();
+demImg.onload = ()=> buildTerrain();
+demImg.onerror = ()=> console.warn('DEM 로드 실패');
+demImg.src = 'jeju_dem.png';
+
+function buildTerrain(){
+  const cw=demImg.width, ch=demImg.height;
+  const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+  const cx=cv.getContext('2d'); cx.drawImage(demImg,0,0);
+  const data=cx.getImageData(0,0,cw,ch).data;
+  function H(u,v){ // u,v 0..1  (u: 서→동, v: 북→남)
+    const px=Math.min(cw-1,Math.max(0,Math.round(u*(cw-1))));
+    const py=Math.min(ch-1,Math.max(0,Math.round(v*(ch-1))));
+    const i=(py*cw+px)*4;
+    let h=(data[i]*256+data[i+1]+data[i+2]/256)-32768;
+    return h<0?0:h;
+  }
+  const SX=300, SY=250;
+  const geo=new THREE.PlaneGeometry(W,D,SX,SY);
+  geo.rotateX(-Math.PI/2);
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), z=pos.getZ(i);
+    const u=(x/W)+0.5;          // 서(0)→동(1)
+    const v=(z/D)+0.5;          // -z(북)→+z(남) ; z=-D/2(북)→v=0(이미지 위=북) OK
+    const h=H(u,v);
+    pos.setY(i, h/MPERUNIT*EXAG);
+  }
+  geo.computeVertexNormals();
+  const mat=new THREE.MeshStandardMaterial({ map:satTex, roughness:1.0, metalness:0.0 });
+  terrain=new THREE.Mesh(geo,mat);
+  terrain.castShadow=terrain.receiveShadow=true;
+  terrain.scale.y = STILL ? 1 : 0.02;     // 평평한 지도 → 솟아오름
+  scene.add(terrain);
+  if(!STILL) gsap.to(terrain.scale,{ y:1, duration:3.2, delay:0.6, ease:'power3.out' });
+}
+
+let last=performance.now();
 function animate(now){
   requestAnimationFrame(animate);
   if(paused) return;
-  const dt = Math.min((now-last)/1000, 0.05); last = now;
-  if(autoRotate) orbit += dt*0.06;
-  edgeLine.material.opacity = 0.45 + Math.sin(now*0.0015)*0.18;
+  const dt=Math.min((now-last)/1000,0.05); last=now;
+  if(autoRotate) orbit += dt*0.05;
   placeCamera();
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 }
 requestAnimationFrame(animate);
-
-addEventListener('resize', ()=>{
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-
-// 스크린샷용: 일시정지 + 캔버스 데이터
-window.__shot = ()=>{ paused=true; renderer.render(scene,camera); return renderer.domElement.toDataURL('image/jpeg',0.7); };
-window.__resume = ()=>{ paused=false; last=performance.now(); };
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+window.__pause=()=>{paused=true;renderer.render(scene,camera);};
+window.__resume=()=>{paused=false;last=performance.now();};
