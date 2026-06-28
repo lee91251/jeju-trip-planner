@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>제주 3D 디오라마 v4</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a1622;overflow:hidden;}
+  #c{position:fixed;inset:0;}
+  #hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+    font:600 14px/1.4 system-ui,sans-serif;color:#bfe0f5;opacity:.8;
+    background:rgba(8,20,34,.5);padding:7px 14px;border-radius:999px;backdrop-filter:blur(6px);}
+</style>
+</head>
+<body>
+<div id="c"></div>
+<div id="hint">🌋 제주가 바다에서 솟아오릅니다 · 드래그로 회전</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="v4.js"></script>
+</body>
+</html>
